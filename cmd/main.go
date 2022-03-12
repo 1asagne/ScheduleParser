@@ -3,6 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+
+	parser "github.com/1asagne/ScheduleParser"
 )
 
 func main() {
@@ -16,7 +18,7 @@ func main() {
 		return
 	}
 
-	err := ParseScheduleFile(inputFileName, outputFileName)
+	err := parser.ParseScheduleFile(inputFileName, outputFileName)
 	if err != nil {
 		fmt.Println(err)
 		return
