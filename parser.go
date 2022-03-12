@@ -1,4 +1,4 @@
-package parser
+package scheduleparser
 
 import (
 	"encoding/json"
