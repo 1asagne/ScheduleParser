@@ -2,7 +2,6 @@ package scheduleparser
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"regexp"
 	"strings"
@@ -160,7 +159,6 @@ func (cell Cell) extractScheduleItem() ScheduleItem {
 func getSchedule(cells []Cell) []ScheduleItem {
 	lessons := make([]ScheduleItem, 0)
 	for _, cell := range cells {
-		fmt.Printf("%#v\n", cell)
 		lesson := cell.extractScheduleItem()
 		lessons = append(lessons, lesson)
 	}
