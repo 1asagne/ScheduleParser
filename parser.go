@@ -2,14 +2,13 @@ package scheduleparser
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"regexp"
 	"strings"
 
 	"github.com/ledongthuc/pdf"
 )
-
-const PrefixSymbolsCount = 156
 
 type Cell struct {
 	data     string
@@ -161,6 +160,7 @@ func (cell Cell) extractScheduleItem() ScheduleItem {
 func getSchedule(cells []Cell) []ScheduleItem {
 	lessons := make([]ScheduleItem, 0)
 	for _, cell := range cells {
+		fmt.Printf("%#v\n", cell)
 		lesson := cell.extractScheduleItem()
 		lessons = append(lessons, lesson)
 	}
@@ -196,8 +196,19 @@ func getCells(texts []pdf.Text) []Cell {
 	return cells
 }
 
+func getMainTexts(texts []pdf.Text) []pdf.Text {
+	mainTexts := []pdf.Text{}
+	for _, text := range texts {
+		if text.Y < 521 && text.X > 42 {
+			mainTexts = append(mainTexts, text)
+		}
+	}
+	return mainTexts
+}
+
 func ParseScheduleText(texts []pdf.Text) ([]byte, error) {
-	cells := getCells(texts[PrefixSymbolsCount:])
+	mainTexts := getMainTexts(texts)
+	cells := getCells(mainTexts)
 	lessons := getSchedule(cells)
 	return json.Marshal(lessons)
 }
