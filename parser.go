@@ -2,6 +2,7 @@ package scheduleparser
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"regexp"
 	"strings"
@@ -99,7 +100,7 @@ func extractDates(datesString string) []Date {
 	return dates
 }
 
-func (cell Cell) extractScheduleItem() ScheduleItem {
+func (cell Cell) extractScheduleItem() (ScheduleItem, error) {
 	lesson := ScheduleItem{}
 
 	re, _ := regexp.Compile(`^(.+\. )(\[.+\])$`)
@@ -113,18 +114,21 @@ func (cell Cell) extractScheduleItem() ScheduleItem {
 	lesson.Title = data[0]
 
 	const (
-		lecture = "лек"
-		seminar = "сем"
-		lab     = "лаб"
+		lecture = "лекции"
+		seminar = "семинар"
+		lab     = "лабораторные занятия"
 	)
 
-	var typeIndex int = -1
-
+	var typeIndex int
 	for i, item := range data {
-		if strings.Contains(item, lecture) || strings.Contains(item, seminar) || strings.Contains(item, lab) {
+		if item == lecture || item == seminar || item == lab {
 			typeIndex = i
 			break
 		}
+	}
+
+	if typeIndex == 0 {
+		return ScheduleItem{}, errors.New("ScheduleItem.Type is not found")
 	}
 
 	if typeIndex == 2 {
@@ -134,8 +138,15 @@ func (cell Cell) extractScheduleItem() ScheduleItem {
 		}
 	}
 
-	if strings.Contains(data[typeIndex], lecture) || strings.Contains(data[typeIndex], seminar) {
-		if strings.Contains(data[typeIndex], lecture) {
+	if data[typeIndex] == lab {
+		lesson.Type = "Лабораторная работа"
+		lesson.Subgroup = strings.Trim(data[typeIndex+1], "()")
+		if typeIndex+2 < len(data) {
+			lesson.Location = data[typeIndex+2]
+		}
+		lesson.Time = extractTime(cell.position, true)
+	} else {
+		if data[typeIndex] == lecture {
 			lesson.Type = "Лекция"
 		} else {
 			lesson.Type = "Семинар"
@@ -144,25 +155,21 @@ func (cell Cell) extractScheduleItem() ScheduleItem {
 			lesson.Location = data[typeIndex+1]
 		}
 		lesson.Time = extractTime(cell.position, false)
-	} else {
-		lesson.Type = "Лабораторная работа"
-		lesson.Subgroup = strings.Trim(data[typeIndex+1], "()")
-		if typeIndex+2 < len(data) {
-			lesson.Location = data[typeIndex+2]
-		}
-		lesson.Time = extractTime(cell.position, true)
 	}
 
-	return lesson
+	return lesson, nil
 }
 
-func getSchedule(cells []Cell) []ScheduleItem {
+func getSchedule(cells []Cell) ([]ScheduleItem, error) {
 	lessons := make([]ScheduleItem, 0)
 	for _, cell := range cells {
-		lesson := cell.extractScheduleItem()
+		lesson, err := cell.extractScheduleItem()
+		if err != nil {
+			return nil, err
+		}
 		lessons = append(lessons, lesson)
 	}
-	return lessons
+	return lessons, nil
 }
 
 func readPdfFile(filePath string) ([]pdf.Text, error) {
@@ -207,7 +214,10 @@ func getMainTexts(texts []pdf.Text) []pdf.Text {
 func ParseScheduleText(texts []pdf.Text) ([]byte, error) {
 	mainTexts := getMainTexts(texts)
 	cells := getCells(mainTexts)
-	lessons := getSchedule(cells)
+	lessons, err := getSchedule(cells)
+	if err != nil {
+		return nil, err
+	}
 	return json.Marshal(lessons)
 }
 
