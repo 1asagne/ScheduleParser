@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"regexp"
 	"strings"
@@ -104,57 +105,46 @@ func extractDates(datesString string) []Date {
 func (cell Cell) extractScheduleItem() (ScheduleItem, error) {
 	lesson := ScheduleItem{}
 
-	re, _ := regexp.Compile(`^(.+\. )(\[.+\])$`)
-	submatchStrings := re.FindStringSubmatch(cell.data)[1:]
-
-	lesson.Dates = extractDates(submatchStrings[1])
-
-	data := strings.Split(submatchStrings[0], ". ")
-	data = data[:len(data)-1]
-
-	lesson.Title = data[0]
+	datesRegexp, _ := regexp.Compile(`\[.+\]$`)
+	datesIndex := datesRegexp.FindStringIndex(cell.data)[0]
+	lesson.Dates = extractDates(cell.data[datesIndex:])
 
 	const (
 		lecture = "лекции"
 		seminar = "семинар"
 		lab     = "лабораторные занятия"
 	)
-
-	var typeIndex int
-	for i, item := range data {
-		if item == lecture || item == seminar || item == lab {
-			typeIndex = i
-			break
-		}
+	typeRegexp, _ := regexp.Compile(fmt.Sprintf(`(%s|%s|%s)\.`, lecture, seminar, lab))
+	typeIndexes := typeRegexp.FindStringIndex(cell.data)
+	if typeIndexes == nil {
+		return ScheduleItem{}, errors.New("Schedule item type is not found")
 	}
 
-	if typeIndex == 0 {
-		return ScheduleItem{}, errors.New("ScheduleItem.Type is not found")
-	}
-
-	if typeIndex == 2 {
-		lesson.Teacher = data[1]
-		if strings.Contains(data[1], ".") {
-			lesson.Teacher += "."
-		}
-	}
-
-	if data[typeIndex] == lab {
+	switch cell.data[typeIndexes[0] : typeIndexes[1]-1] {
+	case lecture:
+		lesson.Type = "Лекция"
+	case seminar:
+		lesson.Type = "Семинар"
+	case lab:
 		lesson.Type = "Лабораторная работа"
-		lesson.Subgroup = strings.Trim(data[typeIndex+1], "()")
-		if typeIndex+2 < len(data) {
-			lesson.Location = data[typeIndex+2]
-		}
+	}
+
+	beforeType := strings.Split(strings.TrimSpace(cell.data[:typeIndexes[0]]), ". ")
+	if len(beforeType) == 1 {
+		lesson.Title = strings.TrimSuffix(beforeType[0], ".")
+	} else {
+		lesson.Title = beforeType[0]
+		lesson.Teacher = beforeType[1]
+	}
+
+	afterType := strings.Split(strings.TrimSuffix(strings.TrimLeft(cell.data[typeIndexes[1]:datesIndex], " "), ". "), ". ")
+
+	if len(afterType) == 2 {
+		lesson.Subgroup = strings.Trim(afterType[0], "()")
+		lesson.Location = afterType[1]
 		lesson.Time = extractTime(cell.position, true)
 	} else {
-		if data[typeIndex] == lecture {
-			lesson.Type = "Лекция"
-		} else {
-			lesson.Type = "Семинар"
-		}
-		if typeIndex+1 < len(data) {
-			lesson.Location = data[typeIndex+1]
-		}
+		lesson.Location = afterType[0]
 		lesson.Time = extractTime(cell.position, false)
 	}
 
