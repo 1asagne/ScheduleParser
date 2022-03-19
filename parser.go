@@ -1,6 +1,7 @@
 package scheduleparser
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"os"
@@ -183,6 +184,17 @@ func readPdfFile(filePath string) ([]pdf.Text, error) {
 	return texts, nil
 }
 
+func readPdfBytes(fileBytes []byte) ([]pdf.Text, error) {
+	bytesReader := bytes.NewReader(fileBytes)
+	pdfReader, err := pdf.NewReader(bytesReader, int64(len(fileBytes)))
+	if err != nil {
+		return nil, err
+	}
+	page := pdfReader.Page(1)
+	texts := page.Content().Text
+	return texts, nil
+}
+
 func getCells(texts []pdf.Text) []Cell {
 	cells := []Cell{}
 	var cell Cell
@@ -211,7 +223,7 @@ func getMainTexts(texts []pdf.Text) []pdf.Text {
 	return mainTexts
 }
 
-func ParseScheduleText(texts []pdf.Text) ([]byte, error) {
+func parseScheduleText(texts []pdf.Text) ([]byte, error) {
 	mainTexts := getMainTexts(texts)
 	cells := getCells(mainTexts)
 	lessons, err := getSchedule(cells)
@@ -227,7 +239,7 @@ func ParseScheduleFile(inputFilePath string, outputFilePath string) error {
 		return err
 	}
 
-	jsonBytes, err := ParseScheduleText(texts)
+	jsonBytes, err := parseScheduleText(texts)
 	if err != nil {
 		return err
 	}
@@ -237,4 +249,16 @@ func ParseScheduleFile(inputFilePath string, outputFilePath string) error {
 		return err
 	}
 	return nil
+}
+
+func ParseScheduleBytes(fileBytes []byte) ([]byte, error) {
+	texts, err := readPdfBytes(fileBytes)
+	if err != nil {
+		return nil, err
+	}
+	jsonBytes, err := parseScheduleText(texts)
+	if err != nil {
+		return nil, err
+	}
+	return jsonBytes, nil
 }
