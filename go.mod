@@ -1,4 +1,4 @@
-module github.com/1asagne/ScheduleParser
+module github.com/1asagne/scheduleparser
 
 go 1.18
 

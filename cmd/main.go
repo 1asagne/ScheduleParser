@@ -4,7 +4,7 @@ import (
 	"flag"
 	"fmt"
 
-	parser "github.com/1asagne/ScheduleParser"
+	parser "github.com/1asagne/scheduleparser"
 )
 
 func main() {
