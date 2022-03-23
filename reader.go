@@ -1,3 +1,5 @@
+// Package scheduleparser provides structs and functions for parsing pdf schedules in a specific format to json.
+
 package scheduleparser
 
 import (
@@ -6,6 +8,7 @@ import (
 	"github.com/ledongthuc/pdf"
 )
 
+// readPdfFile opens file on specified path, reads content and returns slice of pdf.Text.
 func readPdfFile(filePath string) ([]pdf.Text, error) {
 	file, reader, err := pdf.Open(filePath)
 	if err != nil {
@@ -17,6 +20,7 @@ func readPdfFile(filePath string) ([]pdf.Text, error) {
 	return texts, nil
 }
 
+// readPdfBytes reads specified file bytes and returns slice of pdf.Text.
 func readPdfBytes(fileBytes []byte) ([]pdf.Text, error) {
 	bytesReader := bytes.NewReader(fileBytes)
 	pdfReader, err := pdf.NewReader(bytesReader, int64(len(fileBytes)))

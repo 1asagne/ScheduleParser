@@ -1,3 +1,5 @@
+// Main package provides entrypoint to use schedule parser as executable.
+
 package main
 
 import (
@@ -7,22 +9,24 @@ import (
 	parser "github.com/1asagne/scheduleparser"
 )
 
+// Main function reads command-line arguments,
+// parses input and output files paths and uses ParseScheduleFile from scheduleparser package.
 func main() {
-	var inputFileName, outputFileName string
-	flag.StringVar(&inputFileName, "i", "", "Input pdf file path")
-	flag.StringVar(&outputFileName, "o", "", "Output json file path")
+	var inputFilePath, outputFilePath string
+	flag.StringVar(&inputFilePath, "i", "", "Input pdf file path")
+	flag.StringVar(&outputFilePath, "o", "", "Output json file path")
 	flag.Parse()
 
-	if inputFileName == "" || outputFileName == "" {
+	if inputFilePath == "" || outputFilePath == "" {
 		flag.PrintDefaults()
 		return
 	}
 
-	err := parser.ParseScheduleFile(inputFileName, outputFileName)
+	err := parser.ParseScheduleFile(inputFilePath, outputFilePath)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
 
-	fmt.Printf("Parsing completed successfully.\nOutput JSON file: %v\n", outputFileName)
+	fmt.Printf("Parsing completed successfully.\nOutput JSON file: %v\n", outputFilePath)
 }

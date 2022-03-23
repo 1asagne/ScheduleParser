@@ -1,3 +1,5 @@
+// Package scheduleparser provides structs and functions for parsing pdf schedules in a specific format to json.
+
 package scheduleparser
 
 import (
@@ -7,10 +9,12 @@ import (
 	"github.com/ledongthuc/pdf"
 )
 
-func getSchedule(rawItems []ScheduleItemRaw) ([]ScheduleItem, error) {
-	lessons := make([]ScheduleItem, 0)
+// getSchedule takes slice of ScheduleEventRaw,
+// forms slice of ScheduleEvent and returns it.
+func getSchedule(rawItems []ScheduleEventRaw) ([]ScheduleEvent, error) {
+	lessons := make([]ScheduleEvent, 0)
 	for _, rawItem := range rawItems {
-		lesson, err := rawItem.extractScheduleItem()
+		lesson, err := rawItem.extractScheduleEvent()
 		if err != nil {
 			return nil, err
 		}
@@ -19,9 +23,11 @@ func getSchedule(rawItems []ScheduleItemRaw) ([]ScheduleItem, error) {
 	return lessons, nil
 }
 
-func getRawItems(texts []pdf.Text) []ScheduleItemRaw {
-	rawItems := []ScheduleItemRaw{}
-	var rawItem ScheduleItemRaw
+// getRawEvents takes slice of pdf.Text,
+// forms slice of ScheduleEventRaw and returns it.
+func getRawEvents(texts []pdf.Text) []ScheduleEventRaw {
+	rawItems := []ScheduleEventRaw{}
+	var rawItem ScheduleEventRaw
 	for i, text := range texts {
 		if rawItem.data == "" {
 			rawItem.position = pdf.Point{X: text.X, Y: text.Y}
@@ -37,6 +43,8 @@ func getRawItems(texts []pdf.Text) []ScheduleItemRaw {
 	return rawItems
 }
 
+// getMainTexts takes slice of pdf.Text,
+// returns slice of pdf.Text without junk.
 func getMainTexts(texts []pdf.Text) []pdf.Text {
 	mainTexts := []pdf.Text{}
 	for _, text := range texts {
@@ -47,9 +55,12 @@ func getMainTexts(texts []pdf.Text) []pdf.Text {
 	return mainTexts
 }
 
+// parseScheduleText takes slice of pdf.Text,
+// parses content using getMainTexts, getRawEvents and getSchedule,
+// returns parsed content in bytes
 func parseScheduleText(texts []pdf.Text) ([]byte, error) {
 	mainTexts := getMainTexts(texts)
-	rawItems := getRawItems(mainTexts)
+	rawItems := getRawEvents(mainTexts)
 	lessons, err := getSchedule(rawItems)
 	if err != nil {
 		return nil, err
@@ -57,6 +68,8 @@ func parseScheduleText(texts []pdf.Text) ([]byte, error) {
 	return json.Marshal(lessons)
 }
 
+// ParseScheduleFile gets slice of pdf.Text from input file using readPdfFile,
+// parses content using parseScheduleText and writes content bytes to output file.
 func ParseScheduleFile(inputFilePath string, outputFilePath string) error {
 	texts, err := readPdfFile(inputFilePath)
 	if err != nil {
@@ -75,8 +88,10 @@ func ParseScheduleFile(inputFilePath string, outputFilePath string) error {
 	return nil
 }
 
-func ParseScheduleBytes(fileBytes []byte) ([]byte, error) {
-	texts, err := readPdfBytes(fileBytes)
+// ParseScheduleBytes gets slice of pdf.Text from content bytes using readPdfBytes,
+// parses content using parseScheduleText and returns content bytes in json format.
+func ParseScheduleBytes(contentBytes []byte) ([]byte, error) {
+	texts, err := readPdfBytes(contentBytes)
 	if err != nil {
 		return nil, err
 	}

@@ -1,3 +1,5 @@
+// Package scheduleparser provides structs and functions for parsing pdf schedules in a specific format to json.
+
 package scheduleparser
 
 import (
@@ -9,33 +11,38 @@ import (
 	"github.com/ledongthuc/pdf"
 )
 
-type ScheduleItemRaw struct {
+// ScheduleEventRaw is a schedule event that contains data string and position.
+// It is retrieved from pdf file.
+type ScheduleEventRaw struct {
 	data     string
 	position pdf.Point
 }
 
-type ScheduleItemTime struct {
+// ScheduleEventTime contains start/end time of schedule event.
+type ScheduleEventTime struct {
 	Start string `json:"start"`
 	End   string `json:"end"`
 }
 
-type ScheduleItemDate struct {
+// ScheduleEventDate contains start/end date and frequency of schedule event.
+type ScheduleEventDate struct {
 	Start     string `json:"start"`
 	End       string `json:"end"`
 	Frequency string `json:"frequency"`
 }
 
-type ScheduleItem struct {
-	Title    string             `json:"title"`
-	Teacher  string             `json:"teacher"`
-	Type     string             `json:"type"`
-	Subgroup string             `json:"subgroup"`
-	Location string             `json:"location"`
-	Time     ScheduleItemTime   `json:"time"`
-	Dates    []ScheduleItemDate `json:"dates"`
+// ScheduleEvent is a schedule event in json format.
+type ScheduleEvent struct {
+	Title    string              `json:"title"`
+	Teacher  string              `json:"teacher"`
+	Type     string              `json:"type"`
+	Subgroup string              `json:"subgroup"`
+	Location string              `json:"location"`
+	Time     ScheduleEventTime   `json:"time"`
+	Dates    []ScheduleEventDate `json:"dates"`
 }
 
-var times = [...]ScheduleItemTime{
+var eventTimes = [...]ScheduleEventTime{
 	{"8:30", "10:10"},
 	{"10:20", "12:00"},
 	{"12:20", "14:00"},
@@ -46,9 +53,11 @@ var times = [...]ScheduleItemTime{
 	{"21:20", "22:50"},
 }
 
-func (rawItem *ScheduleItemRaw) extractTime(isLab bool) ScheduleItemTime {
+// extractTime searches for time in schedule event data and extracts it,
+// returns ScheduleEventTime.
+func (rawEvent *ScheduleEventRaw) extractTime(isLab bool) ScheduleEventTime {
 	var timesIndex int
-	switch int(rawItem.position.X) {
+	switch int(rawEvent.position.X) {
 	case 46:
 		timesIndex = 0
 	case 139:
@@ -67,21 +76,23 @@ func (rawItem *ScheduleItemRaw) extractTime(isLab bool) ScheduleItemTime {
 		timesIndex = 7
 	}
 	if isLab {
-		return ScheduleItemTime{Start: times[timesIndex].Start, End: times[timesIndex+1].End}
+		return ScheduleEventTime{Start: eventTimes[timesIndex].Start, End: eventTimes[timesIndex+1].End}
 	}
-	return times[timesIndex]
+	return eventTimes[timesIndex]
 }
 
-func (rawItem *ScheduleItemRaw) extractDates() ([]ScheduleItemDate, int) {
+// extractDates searches for dates in schedule event data and extracts them,
+// returns slice of ScheduleEventDate and index of first occurrence.
+func (rawEvent *ScheduleEventRaw) extractDates() ([]ScheduleEventDate, int) {
 	datesRegexp, _ := regexp.Compile(`\[.+\]$`)
-	datesIndex := datesRegexp.FindStringIndex(rawItem.data)[0]
-	datesString := rawItem.data[datesIndex:]
+	datesIndex := datesRegexp.FindStringIndex(rawEvent.data)[0]
+	datesString := rawEvent.data[datesIndex:]
 
-	dates := make([]ScheduleItemDate, 0)
+	dates := make([]ScheduleEventDate, 0)
 	datesString = strings.Trim(datesString, "[]")
 	for _, complexDate := range strings.Split(datesString, ", ") {
 		splitDate := strings.Split(complexDate, " ")
-		date := ScheduleItemDate{}
+		date := ScheduleEventDate{}
 		switch len(splitDate) {
 		case 1:
 			date.Start = splitDate[0]
@@ -103,11 +114,12 @@ func (rawItem *ScheduleItemRaw) extractDates() ([]ScheduleItemDate, int) {
 	return dates, datesIndex
 }
 
-func (rawItem *ScheduleItemRaw) extractScheduleItem() (ScheduleItem, error) {
-	scheduleItem := ScheduleItem{}
+// extractScheduleEvent extracts ScheduleEvent from event data using extractTime and extractDates.
+func (rawEvent *ScheduleEventRaw) extractScheduleEvent() (ScheduleEvent, error) {
+	scheduleEvent := ScheduleEvent{}
 
 	var datesIndex int
-	scheduleItem.Dates, datesIndex = rawItem.extractDates()
+	scheduleEvent.Dates, datesIndex = rawEvent.extractDates()
 
 	const (
 		lecture = "лекции"
@@ -115,38 +127,38 @@ func (rawItem *ScheduleItemRaw) extractScheduleItem() (ScheduleItem, error) {
 		lab     = "лабораторные занятия"
 	)
 	typeRegexp, _ := regexp.Compile(fmt.Sprintf(`(%s|%s|%s)\.`, lecture, seminar, lab))
-	typeIndexes := typeRegexp.FindStringIndex(rawItem.data)
+	typeIndexes := typeRegexp.FindStringIndex(rawEvent.data)
 	if typeIndexes == nil {
-		return ScheduleItem{}, errors.New("Schedule item type is not found")
+		return ScheduleEvent{}, errors.New("Schedule event type is not found")
 	}
 
-	switch rawItem.data[typeIndexes[0] : typeIndexes[1]-1] {
+	switch rawEvent.data[typeIndexes[0] : typeIndexes[1]-1] {
 	case lecture:
-		scheduleItem.Type = "Лекция"
+		scheduleEvent.Type = "Лекция"
 	case seminar:
-		scheduleItem.Type = "Семинар"
+		scheduleEvent.Type = "Семинар"
 	case lab:
-		scheduleItem.Type = "Лабораторная работа"
+		scheduleEvent.Type = "Лабораторная работа"
 	}
 
-	beforeType := strings.Split(strings.TrimSpace(rawItem.data[:typeIndexes[0]]), ". ")
+	beforeType := strings.Split(strings.TrimSpace(rawEvent.data[:typeIndexes[0]]), ". ")
 	if len(beforeType) == 1 {
-		scheduleItem.Title = strings.TrimSuffix(beforeType[0], ".")
+		scheduleEvent.Title = strings.TrimSuffix(beforeType[0], ".")
 	} else {
-		scheduleItem.Title = beforeType[0]
-		scheduleItem.Teacher = beforeType[1]
+		scheduleEvent.Title = beforeType[0]
+		scheduleEvent.Teacher = beforeType[1]
 	}
 
-	afterType := strings.Split(strings.TrimSuffix(strings.TrimLeft(rawItem.data[typeIndexes[1]:datesIndex], " "), ". "), ". ")
+	afterType := strings.Split(strings.TrimSuffix(strings.TrimLeft(rawEvent.data[typeIndexes[1]:datesIndex], " "), ". "), ". ")
 
 	if len(afterType) == 2 {
-		scheduleItem.Subgroup = strings.Trim(afterType[0], "()")
-		scheduleItem.Location = afterType[1]
-		scheduleItem.Time = rawItem.extractTime(true)
+		scheduleEvent.Subgroup = strings.Trim(afterType[0], "()")
+		scheduleEvent.Location = afterType[1]
+		scheduleEvent.Time = rawEvent.extractTime(true)
 	} else {
-		scheduleItem.Location = afterType[0]
-		scheduleItem.Time = rawItem.extractTime(false)
+		scheduleEvent.Location = afterType[0]
+		scheduleEvent.Time = rawEvent.extractTime(false)
 	}
 
-	return scheduleItem, nil
+	return scheduleEvent, nil
 }
