@@ -11,38 +11,38 @@ import (
 	"github.com/ledongthuc/pdf"
 )
 
-// ScheduleEventRaw is a schedule event that contains data string and position.
+// RawEvent is a schedule event that contains data string and position.
 // It is retrieved from pdf file.
-type ScheduleEventRaw struct {
+type RawEvent struct {
 	data     string
 	position pdf.Point
 }
 
-// ScheduleEventTime contains start/end time of schedule event.
-type ScheduleEventTime struct {
+// EventTime contains start/end time of schedule event.
+type EventTime struct {
 	Start string `json:"start"`
 	End   string `json:"end"`
 }
 
-// ScheduleEventDate contains start/end date and frequency of schedule event.
-type ScheduleEventDate struct {
+// EventDate contains start/end date and frequency of schedule event.
+type EventDate struct {
 	Start     string `json:"start"`
 	End       string `json:"end"`
 	Frequency string `json:"frequency"`
 }
 
-// ScheduleEvent is a schedule event in json format.
-type ScheduleEvent struct {
-	Title    string              `json:"title"`
-	Teacher  string              `json:"teacher"`
-	Type     string              `json:"type"`
-	Subgroup string              `json:"subgroup"`
-	Location string              `json:"location"`
-	Time     ScheduleEventTime   `json:"time"`
-	Dates    []ScheduleEventDate `json:"dates"`
+// Event is a schedule event in json format.
+type Event struct {
+	Title    string      `json:"title"`
+	Teacher  string      `json:"teacher"`
+	Type     string      `json:"type"`
+	Subgroup string      `json:"subgroup"`
+	Location string      `json:"location"`
+	Time     EventTime   `json:"time"`
+	Dates    []EventDate `json:"dates"`
 }
 
-var eventTimes = [...]ScheduleEventTime{
+var eventTimes = [...]EventTime{
 	{"8:30", "10:10"},
 	{"10:20", "12:00"},
 	{"12:20", "14:00"},
@@ -54,8 +54,8 @@ var eventTimes = [...]ScheduleEventTime{
 }
 
 // extractTime searches for time in schedule event data and extracts it,
-// returns ScheduleEventTime.
-func (rawEvent *ScheduleEventRaw) extractTime(isLab bool) ScheduleEventTime {
+// returns EventTime.
+func (rawEvent *RawEvent) extractTime(isLab bool) EventTime {
 	var timesIndex int
 	switch int(rawEvent.position.X) {
 	case 46:
@@ -76,23 +76,23 @@ func (rawEvent *ScheduleEventRaw) extractTime(isLab bool) ScheduleEventTime {
 		timesIndex = 7
 	}
 	if isLab {
-		return ScheduleEventTime{Start: eventTimes[timesIndex].Start, End: eventTimes[timesIndex+1].End}
+		return EventTime{Start: eventTimes[timesIndex].Start, End: eventTimes[timesIndex+1].End}
 	}
 	return eventTimes[timesIndex]
 }
 
 // extractDates searches for dates in schedule event data and extracts them,
-// returns slice of ScheduleEventDate and index of first occurrence.
-func (rawEvent *ScheduleEventRaw) extractDates() ([]ScheduleEventDate, int) {
+// returns slice of EventDate and index of first occurrence.
+func (rawEvent *RawEvent) extractDates() ([]EventDate, int) {
 	datesRegexp, _ := regexp.Compile(`\[.+\]$`)
 	datesIndex := datesRegexp.FindStringIndex(rawEvent.data)[0]
 	datesString := rawEvent.data[datesIndex:]
 
-	dates := make([]ScheduleEventDate, 0)
+	dates := make([]EventDate, 0)
 	datesString = strings.Trim(datesString, "[]")
 	for _, complexDate := range strings.Split(datesString, ", ") {
 		splitDate := strings.Split(complexDate, " ")
-		date := ScheduleEventDate{}
+		date := EventDate{}
 		switch len(splitDate) {
 		case 1:
 			date.Start = splitDate[0]
@@ -114,12 +114,12 @@ func (rawEvent *ScheduleEventRaw) extractDates() ([]ScheduleEventDate, int) {
 	return dates, datesIndex
 }
 
-// extractScheduleEvent extracts ScheduleEvent from event data using extractTime and extractDates.
-func (rawEvent *ScheduleEventRaw) extractScheduleEvent() (ScheduleEvent, error) {
-	scheduleEvent := ScheduleEvent{}
+// extractEvent extracts Event from event data using extractTime and extractDates.
+func (rawEvent *RawEvent) extractEvent() (Event, error) {
+	event := Event{}
 
 	var datesIndex int
-	scheduleEvent.Dates, datesIndex = rawEvent.extractDates()
+	event.Dates, datesIndex = rawEvent.extractDates()
 
 	const (
 		lecture = "лекции"
@@ -129,36 +129,36 @@ func (rawEvent *ScheduleEventRaw) extractScheduleEvent() (ScheduleEvent, error) 
 	typeRegexp, _ := regexp.Compile(fmt.Sprintf(`(%s|%s|%s)\.`, lecture, seminar, lab))
 	typeIndexes := typeRegexp.FindStringIndex(rawEvent.data)
 	if typeIndexes == nil {
-		return ScheduleEvent{}, errors.New("Schedule event type is not found")
+		return Event{}, errors.New("Schedule event type is not found")
 	}
 
 	switch rawEvent.data[typeIndexes[0] : typeIndexes[1]-1] {
 	case lecture:
-		scheduleEvent.Type = "Лекция"
+		event.Type = "Лекция"
 	case seminar:
-		scheduleEvent.Type = "Семинар"
+		event.Type = "Семинар"
 	case lab:
-		scheduleEvent.Type = "Лабораторная работа"
+		event.Type = "Лабораторная работа"
 	}
 
 	beforeType := strings.Split(strings.TrimSpace(rawEvent.data[:typeIndexes[0]]), ". ")
 	if len(beforeType) == 1 {
-		scheduleEvent.Title = strings.TrimSuffix(beforeType[0], ".")
+		event.Title = strings.TrimSuffix(beforeType[0], ".")
 	} else {
-		scheduleEvent.Title = beforeType[0]
-		scheduleEvent.Teacher = beforeType[1]
+		event.Title = beforeType[0]
+		event.Teacher = beforeType[1]
 	}
 
 	afterType := strings.Split(strings.TrimSuffix(strings.TrimLeft(rawEvent.data[typeIndexes[1]:datesIndex], " "), ". "), ". ")
 
 	if len(afterType) == 2 {
-		scheduleEvent.Subgroup = strings.Trim(afterType[0], "()")
-		scheduleEvent.Location = afterType[1]
-		scheduleEvent.Time = rawEvent.extractTime(true)
+		event.Subgroup = strings.Trim(afterType[0], "()")
+		event.Location = afterType[1]
+		event.Time = rawEvent.extractTime(true)
 	} else {
-		scheduleEvent.Location = afterType[0]
-		scheduleEvent.Time = rawEvent.extractTime(false)
+		event.Location = afterType[0]
+		event.Time = rawEvent.extractTime(false)
 	}
 
-	return scheduleEvent, nil
+	return event, nil
 }

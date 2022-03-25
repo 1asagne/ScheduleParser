@@ -6,11 +6,11 @@ import (
 	"flag"
 	"fmt"
 
-	parser "github.com/1asagne/scheduleparser"
+	"github.com/1asagne/scheduleparser"
 )
 
 // Main function reads command-line arguments,
-// parses input and output files paths and uses ParseScheduleFile from scheduleparser package.
+// parses input and output files paths and uses ParseFile from scheduleparser package.
 func main() {
 	var inputFilePath, outputFilePath string
 	flag.StringVar(&inputFilePath, "i", "", "Input pdf file path")
@@ -22,7 +22,7 @@ func main() {
 		return
 	}
 
-	err := parser.ParseScheduleFile(inputFilePath, outputFilePath)
+	err := scheduleparser.ParseFile(inputFilePath, outputFilePath)
 	if err != nil {
 		fmt.Println(err)
 		return

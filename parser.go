@@ -9,38 +9,38 @@ import (
 	"github.com/ledongthuc/pdf"
 )
 
-// getSchedule takes slice of ScheduleEventRaw,
-// forms slice of ScheduleEvent and returns it.
-func getSchedule(rawItems []ScheduleEventRaw) ([]ScheduleEvent, error) {
-	lessons := make([]ScheduleEvent, 0)
-	for _, rawItem := range rawItems {
-		lesson, err := rawItem.extractScheduleEvent()
+// getEvents takes slice of RawEvent,
+// forms slice of Event and returns it.
+func getEvents(rawEvents []RawEvent) ([]Event, error) {
+	events := make([]Event, 0)
+	for _, rawEvent := range rawEvents {
+		event, err := rawEvent.extractEvent()
 		if err != nil {
 			return nil, err
 		}
-		lessons = append(lessons, lesson)
+		events = append(events, event)
 	}
-	return lessons, nil
+	return events, nil
 }
 
 // getRawEvents takes slice of pdf.Text,
-// forms slice of ScheduleEventRaw and returns it.
-func getRawEvents(texts []pdf.Text) []ScheduleEventRaw {
-	rawItems := []ScheduleEventRaw{}
-	var rawItem ScheduleEventRaw
+// forms slice of RawEvent and returns it.
+func getRawEvents(texts []pdf.Text) []RawEvent {
+	rawEvents := []RawEvent{}
+	var rawEvent RawEvent
 	for i, text := range texts {
-		if rawItem.data == "" {
-			rawItem.position = pdf.Point{X: text.X, Y: text.Y}
+		if rawEvent.data == "" {
+			rawEvent.position = pdf.Point{X: text.X, Y: text.Y}
 		} else if text.Y != texts[i-1].Y {
-			rawItem.data += " "
+			rawEvent.data += " "
 		}
-		rawItem.data += text.S
+		rawEvent.data += text.S
 		if text.S == "]" {
-			rawItems = append(rawItems, rawItem)
-			rawItem.data = ""
+			rawEvents = append(rawEvents, rawEvent)
+			rawEvent.data = ""
 		}
 	}
-	return rawItems
+	return rawEvents
 }
 
 // getMainTexts takes slice of pdf.Text,
@@ -55,28 +55,28 @@ func getMainTexts(texts []pdf.Text) []pdf.Text {
 	return mainTexts
 }
 
-// parseScheduleText takes slice of pdf.Text,
-// parses content using getMainTexts, getRawEvents and getSchedule,
+// parseTexts takes slice of pdf.Text,
+// parses content using getMainTexts, getRawEvents and getEvents,
 // returns parsed content in bytes
-func parseScheduleText(texts []pdf.Text) ([]byte, error) {
+func parseTexts(texts []pdf.Text) ([]byte, error) {
 	mainTexts := getMainTexts(texts)
-	rawItems := getRawEvents(mainTexts)
-	lessons, err := getSchedule(rawItems)
+	rawEvents := getRawEvents(mainTexts)
+	events, err := getEvents(rawEvents)
 	if err != nil {
 		return nil, err
 	}
-	return json.Marshal(lessons)
+	return json.Marshal(events)
 }
 
-// ParseScheduleFile gets slice of pdf.Text from input file using readPdfFile,
-// parses content using parseScheduleText and writes content bytes to output file.
-func ParseScheduleFile(inputFilePath string, outputFilePath string) error {
+// ParseFile reads slice of pdf.Text from input file using readPdfFile,
+// parses content using parseTexts and writes content bytes to output file.
+func ParseFile(inputFilePath string, outputFilePath string) error {
 	texts, err := readPdfFile(inputFilePath)
 	if err != nil {
 		return err
 	}
 
-	jsonBytes, err := parseScheduleText(texts)
+	jsonBytes, err := parseTexts(texts)
 	if err != nil {
 		return err
 	}
@@ -88,14 +88,14 @@ func ParseScheduleFile(inputFilePath string, outputFilePath string) error {
 	return nil
 }
 
-// ParseScheduleBytes gets slice of pdf.Text from content bytes using readPdfBytes,
-// parses content using parseScheduleText and returns content bytes in json format.
-func ParseScheduleBytes(contentBytes []byte) ([]byte, error) {
+// ParseBytes gets slice of pdf.Text from content bytes using readPdfBytes,
+// parses content using parseTexts and returns content bytes in json format.
+func ParseBytes(contentBytes []byte) ([]byte, error) {
 	texts, err := readPdfBytes(contentBytes)
 	if err != nil {
 		return nil, err
 	}
-	jsonBytes, err := parseScheduleText(texts)
+	jsonBytes, err := parseTexts(texts)
 	if err != nil {
 		return nil, err
 	}
