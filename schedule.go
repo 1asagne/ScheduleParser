@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/ledongthuc/pdf"
 )
@@ -14,21 +15,59 @@ import (
 // RawEvent is a schedule event that contains data string and position.
 // It is retrieved from pdf file.
 type RawEvent struct {
-	data     string
-	position pdf.Point
+	data        string
+	position    pdf.Point
+	initialDate time.Time
 }
 
 // EventTime contains start/end time of schedule event.
 type EventTime struct {
-	Start string `json:"start"`
-	End   string `json:"end"`
+	Start time.Time `json:"start"`
+	End   time.Time `json:"end"`
+}
+
+const timeFormat = "15:04 -0700"
+
+// makeEventTime creates EventTime by start time and end time strings,
+// and returns it.
+func makeEventTime(start string, end string) EventTime {
+	eventTime := EventTime{}
+	eventTime.Start, _ = time.Parse(timeFormat, start+" +0300")
+	eventTime.End, _ = time.Parse(timeFormat, end+" +0300")
+	return eventTime
 }
 
 // EventDate contains start/end date and frequency of schedule event.
 type EventDate struct {
-	Start     string `json:"start"`
-	End       string `json:"end"`
-	Frequency string `json:"frequency"`
+	Start     time.Time `json:"start"`
+	End       time.Time `json:"end"`
+	Frequency string    `json:"frequency"`
+}
+
+func (eventDate *EventDate) normalize(date time.Time) {
+	day, month, year := date.Day(), date.Month(), date.Year()
+	if (eventDate.Start.Month() > month) || (eventDate.Start.Month() == month && eventDate.Start.Day() >= day) {
+		eventDate.Start = eventDate.Start.AddDate(year, 0, 0)
+	} else {
+		eventDate.Start = eventDate.Start.AddDate(year+1, 0, 0)
+	}
+	if (eventDate.End.Month() > month) || (eventDate.End.Month() == month && eventDate.End.Day() >= day) {
+		eventDate.End = eventDate.End.AddDate(year, 0, 0)
+	} else {
+		eventDate.End = eventDate.End.AddDate(year+1, 0, 0)
+	}
+}
+
+const dateFormat = "02.01"
+
+// makeEventDate creates EventDate by start date and end date strings,
+// and returns it.
+func makeEventDate(start string, end string, frequency string) EventDate {
+	eventDate := EventDate{}
+	eventDate.Start, _ = time.Parse(dateFormat, start)
+	eventDate.End, _ = time.Parse(dateFormat, end)
+	eventDate.Frequency = frequency
+	return eventDate
 }
 
 // Event is a schedule event in json format.
@@ -43,14 +82,14 @@ type Event struct {
 }
 
 var eventTimes = [...]EventTime{
-	{"8:30", "10:10"},
-	{"10:20", "12:00"},
-	{"12:20", "14:00"},
-	{"14:10", "15:50"},
-	{"16:00", "17:40"},
-	{"18:00", "19:30"},
-	{"19:40", "21:10"},
-	{"21:20", "22:50"},
+	makeEventTime("08:30", "10:10"),
+	makeEventTime("10:20", "12:00"),
+	makeEventTime("12:20", "14:00"),
+	makeEventTime("14:10", "15:50"),
+	makeEventTime("16:00", "17:40"),
+	makeEventTime("18:00", "19:30"),
+	makeEventTime("19:40", "21:10"),
+	makeEventTime("21:20", "22:50"),
 }
 
 // extractTime searches for time in schedule event data and extracts it,
@@ -95,20 +134,17 @@ func (rawEvent *RawEvent) extractDates() ([]EventDate, int) {
 		date := EventDate{}
 		switch len(splitDate) {
 		case 1:
-			date.Start = splitDate[0]
-			date.End = splitDate[0]
-			date.Frequency = "once"
+			date = makeEventDate(splitDate[0], splitDate[0], "once")
 		case 2:
-			switch splitDate[1] {
-			case "к.н.":
-				date.Frequency = "every"
-			case "ч.н.":
-				date.Frequency = "throughout"
+			dateFrequency := splitDate[1]
+			splitDate := strings.Split(splitDate[0], "-")
+			if dateFrequency == "к.н." {
+				date = makeEventDate(splitDate[0], splitDate[1], "once")
+			} else if dateFrequency == "ч.н." {
+				date = makeEventDate(splitDate[0], splitDate[1], "throughout")
 			}
-			splitDate = strings.Split(splitDate[0], "-")
-			date.Start = splitDate[0]
-			date.End = splitDate[1]
 		}
+		date.normalize(rawEvent.initialDate)
 		dates = append(dates, date)
 	}
 	return dates, datesIndex
