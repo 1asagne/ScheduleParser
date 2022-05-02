@@ -58,14 +58,14 @@ func (eventDate *EventDate) normalize(date time.Time) {
 	}
 }
 
-const dateFormat = "02.01"
+const dateFormat = "02.01 -0700"
 
 // makeEventDate creates EventDate by start date and end date strings,
 // and returns it.
 func makeEventDate(start string, end string, frequency string) EventDate {
 	eventDate := EventDate{}
-	eventDate.Start, _ = time.Parse(dateFormat, start)
-	eventDate.End, _ = time.Parse(dateFormat, end)
+	eventDate.Start, _ = time.Parse(dateFormat, start+" +0300")
+	eventDate.End, _ = time.Parse(dateFormat, end+" +0300")
 	eventDate.Frequency = frequency
 	return eventDate
 }
@@ -77,7 +77,6 @@ type Event struct {
 	Type     string      `json:"type"`
 	Subgroup string      `json:"subgroup"`
 	Location string      `json:"location"`
-	Time     EventTime   `json:"time"`
 	Dates    []EventDate `json:"dates"`
 }
 
@@ -139,7 +138,7 @@ func (rawEvent *RawEvent) extractDates() ([]EventDate, int) {
 			dateFrequency := splitDate[1]
 			splitDate := strings.Split(splitDate[0], "-")
 			if dateFrequency == "к.н." {
-				date = makeEventDate(splitDate[0], splitDate[1], "once")
+				date = makeEventDate(splitDate[0], splitDate[1], "every")
 			} else if dateFrequency == "ч.н." {
 				date = makeEventDate(splitDate[0], splitDate[1], "throughout")
 			}
@@ -154,9 +153,6 @@ func (rawEvent *RawEvent) extractDates() ([]EventDate, int) {
 func (rawEvent *RawEvent) extractEvent() (Event, error) {
 	event := Event{}
 
-	var datesIndex int
-	event.Dates, datesIndex = rawEvent.extractDates()
-
 	const (
 		lecture = "лекции"
 		seminar = "семинар"
@@ -170,11 +166,11 @@ func (rawEvent *RawEvent) extractEvent() (Event, error) {
 
 	switch rawEvent.data[typeIndexes[0] : typeIndexes[1]-1] {
 	case lecture:
-		event.Type = "Лекция"
+		event.Type = "lecture"
 	case seminar:
-		event.Type = "Семинар"
+		event.Type = "seminar"
 	case lab:
-		event.Type = "Лабораторная работа"
+		event.Type = "lab"
 	}
 
 	beforeType := strings.Split(strings.TrimSpace(rawEvent.data[:typeIndexes[0]]), ". ")
@@ -185,16 +181,25 @@ func (rawEvent *RawEvent) extractEvent() (Event, error) {
 		event.Teacher = beforeType[1]
 	}
 
+	dates, datesIndex := rawEvent.extractDates()
+
 	afterType := strings.Split(strings.TrimSuffix(strings.TrimLeft(rawEvent.data[typeIndexes[1]:datesIndex], " "), ". "), ". ")
 
+	var eventTime EventTime
 	if len(afterType) == 2 {
 		event.Subgroup = strings.Trim(afterType[0], "()")
 		event.Location = afterType[1]
-		event.Time = rawEvent.extractTime(true)
+		eventTime = rawEvent.extractTime(true)
 	} else {
 		event.Location = afterType[0]
-		event.Time = rawEvent.extractTime(false)
+		eventTime = rawEvent.extractTime(false)
 	}
+
+	for i := range dates {
+		dates[i].Start = dates[i].Start.Add(time.Hour*time.Duration(eventTime.Start.Hour()) + time.Minute*time.Duration(eventTime.Start.Minute()))
+		dates[i].End = dates[i].End.Add(time.Hour*time.Duration(eventTime.End.Hour()) + time.Minute*time.Duration(eventTime.End.Minute()))
+	}
+	event.Dates = dates
 
 	return event, nil
 }
