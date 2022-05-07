@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/1asagne/scheduleparser"
+	"github.com/qsoulior/scheduleparser"
 )
 
 // Main function reads command-line arguments,
