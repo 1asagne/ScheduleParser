@@ -1,4 +1,4 @@
-// Main package provides entrypoint to use schedule parser as executable.
+// Package main provides entrypoint to use schedule parser as executable.
 
 package main
 
@@ -7,16 +7,16 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/qsoulior/scheduleparser"
+	sp "github.com/qsoulior/scheduleparser/pkg/parser"
 )
 
-// Main function reads command-line arguments,
-// parses input and output files paths and uses ParseFile from scheduleparser package.
+// main reads command-line arguments, parses input
+// and output files paths and uses ParseFile from parser package.
 func main() {
 	var inputFilePath, outputFilePath, date string
 	flag.StringVar(&inputFilePath, "i", "", "Input pdf file path")
 	flag.StringVar(&outputFilePath, "o", "", "Output json file path")
-	flag.StringVar(&date, "d", "", "Initial date in 'dd.MM.YYYY' format to determine years of events dates")
+	flag.StringVar(&date, "d", "", "Initial date in 'dd.MM.YYYY' format to determine year of events dates")
 	flag.Parse()
 
 	if inputFilePath == "" || outputFilePath == "" {
@@ -38,7 +38,7 @@ func main() {
 		}
 	}
 
-	err = scheduleparser.ParseFile(inputFilePath, outputFilePath, initialDate)
+	err = sp.ParseFile(inputFilePath, outputFilePath, initialDate)
 	if err != nil {
 		fmt.Println(err)
 		return
