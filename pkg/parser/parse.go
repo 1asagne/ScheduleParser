@@ -58,7 +58,7 @@ func parseEvent(raw *RawEvent) (*Event, error) {
 		eventDates, datesStartIndex, err = parseDates(raw, 0)
 	}
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parseDates error: %w", err)
 	}
 
 	// Parse subgroup and location from data.
@@ -85,10 +85,10 @@ func parseEvent(raw *RawEvent) (*Event, error) {
 // parseEvents takes slice of RawEvent, forms slice of Event and returns it.
 func parseEvents(rawEvents []RawEvent) ([]Event, error) {
 	events := make([]Event, 0)
-	for _, rawEvent := range rawEvents {
+	for i, rawEvent := range rawEvents {
 		event, err := parseEvent(&rawEvent)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("parse events[%d]: %w", i, err)
 		}
 		events = append(events, *event)
 	}
@@ -114,7 +114,7 @@ func parseText(text []pdf.Text, initialDate time.Time) ([]byte, error) {
 	rawEvents := getRawEvents(bodyText, initialDate)
 	events, err := parseEvents(rawEvents)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("parsing error: %w", err)
 	}
 	return json.Marshal(events)
 }

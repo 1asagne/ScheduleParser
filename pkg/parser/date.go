@@ -3,6 +3,7 @@
 package parser
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 	"time"
@@ -53,7 +54,7 @@ func parseDates(raw *RawEvent, shift int) ([]EventDate, int, error) {
 
 	eventTime, err := parseTime(raw, shift)
 	if err != nil {
-		return nil, -1, err
+		return nil, -1, fmt.Errorf("parseTime error: %w", err)
 	}
 
 	// [09.09-28.10 к.н., 11.11, 18.11]

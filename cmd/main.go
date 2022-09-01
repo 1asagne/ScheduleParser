@@ -7,7 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	sp "github.com/qsoulior/scheduleparser/pkg/parser"
+	"github.com/qsoulior/scheduleparser/internal/logger"
+	"github.com/qsoulior/scheduleparser/pkg/parser"
 )
 
 // main reads command-line arguments, parses input
@@ -33,16 +34,16 @@ func main() {
 	} else {
 		initialDate, err = time.Parse("02.01.2006", date)
 		if err != nil {
-			fmt.Println(err)
+			logger.Error.Fatal(fmt.Errorf("incorrect initial date: %w", err))
 			return
 		}
 	}
 
-	err = sp.ParseFile(inputFilePath, outputFilePath, initialDate)
+	err = parser.ParseFile(inputFilePath, outputFilePath, initialDate)
 	if err != nil {
-		fmt.Println(err)
+		logger.Error.Fatal(err)
 		return
 	}
 
-	fmt.Printf("Parsing completed successfully.\nOutput JSON file: %v\n", outputFilePath)
+	logger.Info.Printf("Parsing completed successfully. Output JSON file: %v\n", outputFilePath)
 }

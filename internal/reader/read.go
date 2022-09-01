@@ -4,6 +4,7 @@ package reader
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
 
@@ -14,7 +15,7 @@ import (
 func read(reader io.ReaderAt, size int64) ([]pdf.Text, error) {
 	pdfReader, err := pdf.NewReader(reader, size)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("reading error: %w", err)
 	}
 
 	page := pdfReader.Page(1)
