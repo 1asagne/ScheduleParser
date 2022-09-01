@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/qsoulior/scheduleparser"
 	"github.com/qsoulior/scheduleparser/internal/logger"
-	"github.com/qsoulior/scheduleparser/pkg/parser"
 )
 
 // main reads command-line arguments, parses input
@@ -39,7 +39,7 @@ func main() {
 		}
 	}
 
-	err = parser.ParseFile(inputFilePath, outputFilePath, initialDate)
+	err = scheduleparser.ParseFile(inputFilePath, outputFilePath, initialDate)
 	if err != nil {
 		logger.Error.Fatal(err)
 		return
