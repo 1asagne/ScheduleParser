@@ -4,6 +4,7 @@ package reader
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -40,6 +41,9 @@ func ReadFile(filePath string) ([]pdf.Text, error) {
 
 // ReadBytes reads file bytes and returns slice of pdf.Text.
 func ReadBytes(fileBytes []byte) ([]pdf.Text, error) {
+	if fileBytes == nil {
+		return nil, errors.New("fileBytes is nil")
+	}
 	reader := bytes.NewReader(fileBytes)
 	return read(reader, reader.Size())
 }

@@ -5,6 +5,7 @@ package parser
 import (
 	"errors"
 	"fmt"
+	"log"
 	"regexp"
 	"strings"
 	"time"
@@ -121,10 +122,12 @@ func parseEvent(raw *RawEvent) (*Event, error) {
 func ParseEvents(rawEvents []RawEvent) ([]Event, error) {
 	events := make([]Event, 0)
 	for i, rawEvent := range rawEvents {
+		log.Printf("<--- %v --->\n", rawEvent)
 		event, err := parseEvent(&rawEvent)
 		if err != nil {
 			return nil, fmt.Errorf("parse events[%d]: %w", i, err)
 		}
+		log.Printf("<--- %v --->\n\n", *event)
 		events = append(events, *event)
 	}
 	return events, nil
