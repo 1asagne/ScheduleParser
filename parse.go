@@ -11,6 +11,9 @@ import (
 	"github.com/qsoulior/scheduleparser/pkg/parser"
 )
 
+// Event is retrieved from RawEvent. It is contained in output json.
+type Event = parser.Event
+
 // getBodyText takes slice of pdf.Text, returns slice of pdf.Text without junk.
 func getBodyText(texts []pdf.Text) []pdf.Text {
 	mainText := make([]pdf.Text, 0)
