@@ -1,4 +1,6 @@
-package parser
+// Package scheduleparser implements structs and functions to parse events from pdf content.
+
+package scheduleparser
 
 import (
 	"reflect"

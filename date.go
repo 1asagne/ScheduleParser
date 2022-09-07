@@ -1,6 +1,6 @@
-// Package parser implements structs and functions to parse events from pdf content.
+// Package scheduleparser implements structs and functions to parse events from pdf content.
 
-package parser
+package scheduleparser
 
 import (
 	"fmt"

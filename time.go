@@ -1,10 +1,10 @@
-// Package parser implements structs and functions to parse events from pdf content.
+// Package scheduleparser implements structs and functions to parse events from pdf content.
 
-package parser
+package scheduleparser
 
 import "errors"
 
-// Clock contains hours and minutes values
+// Clock contains hours and minutes values.
 type Clock struct {
 	hour int
 	min  int
@@ -17,7 +17,7 @@ type EventTime struct {
 	end   Clock
 }
 
-// eventTimes is slice of determined EventTime instances
+// eventTimes is slice of determined EventTime instances.
 var eventTimes = [...]EventTime{
 	{Clock{8, 30}, Clock{10, 10}},
 	{Clock{10, 20}, Clock{12, 0}},

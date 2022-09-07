@@ -1,11 +1,10 @@
-// Package parser implements structs and functions to parse events from pdf content.
+// Package scheduleparser implements structs and functions to parse events from pdf content.
 
-package parser
+package scheduleparser
 
 import (
 	"errors"
 	"fmt"
-	"log"
 	"regexp"
 	"strings"
 	"time"
@@ -32,20 +31,24 @@ type Event struct {
 }
 
 // getRawEvents takes slice of pdf.Text, forms slice of RawEvent and returns it.
-func GetRawEvents(texts []pdf.Text, initialDate time.Time) []RawEvent {
+func getRawEvents(texts []pdf.Text, initialDate time.Time) []RawEvent {
 	rawEvents := make([]RawEvent, 0)
-	var rawEvent RawEvent
+	var (
+		data     string
+		position pdf.Point
+	)
 	for i, text := range texts {
-		if rawEvent.data == "" {
-			rawEvent.position = pdf.Point{X: text.X, Y: text.Y}
-		} else if text.Y != texts[i-1].Y {
-			rawEvent.data += " "
-		}
-		rawEvent.data += text.S
-		if text.S == "]" {
-			rawEvent.initialDate = initialDate
-			rawEvents = append(rawEvents, rawEvent)
-			rawEvent.data = ""
+		if text.Y < 521 && text.X > 42 {
+			if data == "" {
+				position = pdf.Point{X: text.X, Y: text.Y}
+			} else if texts[i].Y != texts[i-1].Y {
+				data += " "
+			}
+			data += text.S
+			if text.S == "]" {
+				rawEvents = append(rawEvents, RawEvent{data, position, initialDate})
+				data = ""
+			}
 		}
 	}
 	return rawEvents
@@ -119,15 +122,13 @@ func parseEvent(raw *RawEvent) (*Event, error) {
 }
 
 // parseEvents takes slice of RawEvent, forms slice of Event and returns it.
-func ParseEvents(rawEvents []RawEvent) ([]Event, error) {
+func parseEvents(rawEvents []RawEvent) ([]Event, error) {
 	events := make([]Event, 0)
 	for i, rawEvent := range rawEvents {
-		log.Printf("<--- %v --->\n", rawEvent)
 		event, err := parseEvent(&rawEvent)
 		if err != nil {
 			return nil, fmt.Errorf("parse events[%d]: %w", i, err)
 		}
-		log.Printf("<--- %v --->\n\n", *event)
 		events = append(events, *event)
 	}
 	return events, nil
