@@ -79,7 +79,8 @@ func parseEvent(raw *RawEvent) (*Event, error) {
 
 	stringsBeforeType := strings.Split(raw.data[:typeIndexes[0]-1], ". ")
 	if len(stringsBeforeType) == 1 {
-		eventTitle = stringsBeforeType[0][:len(stringsBeforeType)-1]
+		eventTitle = stringsBeforeType[0]
+		eventTitle = eventTitle[:len(eventTitle)-1]
 	} else {
 		eventTitle = stringsBeforeType[0]
 		eventTeacher = stringsBeforeType[1]
